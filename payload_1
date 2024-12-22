@@ -1,0 +1,36 @@
+@echo off
+setlocal enabledelayedexpansion
+
+:: Add to startup
+echo @echo off > "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\listener.bat"
+echo start "" "%~f0" >> "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup\listener.bat"
+
+:: Set password and port
+set "PASSWORD=your_secure_password_here"
+set "PORT=3032"
+
+:: Start listening
+:listen
+echo Listening on port %PORT%...
+netsh advfirewall firewall add rule name="Open Port %PORT%" dir=in action=allow protocol=TCP localport=%PORT%
+
+:: Use netcat to listen on the port
+tools\nc64.exe -l -p %PORT% > received.txt
+
+:: Check the received message
+set /p MSG=<received.txt
+for /f "tokens=1,2" %%a in ("%MSG%") do (
+    set "RECV_PASS=%%a"
+    set "IP=%%b"
+)
+
+if "%RECV_PASS%"=="%PASSWORD%" (
+    echo Valid password received. Pinging %IP%...
+    ping -n 4 %IP% > ping_result.txt
+    type ping_result.txt
+) else (
+    echo Invalid password or command.
+)
+
+:: Continue listening
+goto listen
